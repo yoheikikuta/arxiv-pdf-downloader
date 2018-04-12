@@ -1,0 +1,11 @@
+{
+    "manifest_version": 2,
+    "name": "Popup",
+    "version": "1.0",
+    "description" : "TEST",
+    "browser_action" : {
+        "default_icon" : "images/icon_19.png",
+        "default_title" : "Popup",
+        "default_popup" : "popup.html"
+     }
+}
