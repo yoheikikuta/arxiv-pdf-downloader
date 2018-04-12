@@ -3,6 +3,9 @@
     "name": "Popup",
     "version": "1.0",
     "description" : "TEST",
+    "permissions" : [
+        "downloads"
+    ],
     "browser_action" : {
         "default_icon" : "images/icon_19.png",
         "default_title" : "Popup",
