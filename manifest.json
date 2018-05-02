@@ -4,8 +4,21 @@
     "version": "1.0",
     "description" : "TEST",
     "permissions" : [
+        "tabs",
         "downloads"
     ],
+    "commands": {
+        "EventName": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+A"
+            },
+            "description": "description of this event"
+        }
+    },
+    "background": {
+        "scripts": ["background.js"],
+        "persistent": false
+    },
     "browser_action" : {
         "default_icon" : "images/icon_19.png",
         "default_title" : "Popup",
