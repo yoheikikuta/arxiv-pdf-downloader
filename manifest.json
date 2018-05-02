@@ -1,12 +1,9 @@
 {
     "manifest_version": 2,
-    "name": "Popup",
+    "name": "Arxiv Downloader",
     "version": "1.0",
-    "description" : "TEST",
-    "permissions" : [
-        "tabs",
-        "downloads"
-    ],
+    "description" : "This is a chrome extension for downloading arXiv papers",
+    "permissions" : ["tabs", "downloads"],
     "commands": {
         "EventName": {
             "suggested_key": {
