@@ -68,7 +68,8 @@ GoogleDriveUploader.prototype._createFolder = function(folder, responseCallback)
 
         xhr.send(JSON.stringify({
             title: folder.filename,
-            parents: [{id: 'root'}],
+            //parents: [{id: 'root'}], //For the top directory of my drive
+            parents: [{id: 'Specific_Drive_ID'}], //For a specific directory
             mimeType: 'application/vnd.google-apps.folder'
         }));
     };
