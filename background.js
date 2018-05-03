@@ -16,7 +16,7 @@ GoogleDriveUploader.prototype.uploadFile = function(file, responseCallback) {
 
         xhr.onload = function() {
             me._createFolder({
-                filename: 'Chrome Upload',
+                filename: 'arXiv-papers',
                 token: token
             }, function(parentFolder) {
                 console.log(parentFolder);
