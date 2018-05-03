@@ -102,6 +102,46 @@ GoogleDriveUploader.prototype._putOnDrive = function(file, responseCallback) {
 };
 
 
+GetUrlAndName = function(tab){
+    var pattern_abst = /https:\/\/arxiv.org\/abs\/\S+/;
+    var pattern_pdf = /https:\/\/arxiv.org\/pdf\/\S+/;
+
+    if(pattern_abst.test(String(tab.url))) {
+        var [prefix, fileid] = tab.url.split("abs");
+        var filepdf_url = prefix + "pdf" + fileid + ".pdf";
+        var save_filename = tab.title + ".pdf";
+
+        return [filepdf_url, save_filename];
+
+    } else if (pattern_pdf.test(String(tab.url))) {
+        var filepdf_url = tab.url;
+        var paper_id = tab.title.replace(".pdf", "");
+
+        function loadXMLDoc(myurl) {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    return xhttp.responseText;
+                }
+            };
+            xhttp.open("GET", myurl, false);
+            xhttp.send();
+            return xhttp.onreadystatechange();
+        }
+
+        var response = loadXMLDoc("http://export.arxiv.org/api/query?search_query=" + paper_id);
+        var title_with_tag = String(response.match(/<title>(.*?)<\/title>/g));
+        var save_filename = "[" + paper_id + "] " + String(title_with_tag.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,'')) + ".pdf";
+
+        return [filepdf_url, save_filename];
+
+    } else {
+        alert("This extension is valid only in arXiv abstract or pdf pages!!");
+        return null;
+    }
+};
+
+
 CreateRequestObj = function(name, tab){
     var file = {
         name: name,
@@ -118,20 +158,18 @@ CreateRequestObj = function(name, tab){
 
 chrome.commands.onCommand.addListener(function(command) {
     chrome.tabs.getSelected(null, function(tab) {
-        var [prefix, fileid] = tab.url.split("abs");
-        var filepdf_url = prefix + "pdf" + fileid + ".pdf";
-        var save_filename = tab.title + ".pdf";
+
+        // Exit if the website is not arXiv
+        if (!GetUrlAndName(tab)){return;}
+
+        var [filepdf_url, save_filename] = GetUrlAndName(tab);
         tab.url = filepdf_url
 
         var googleDriveUploader = new GoogleDriveUploader();
         var request = CreateRequestObj(save_filename, tab);
-        //alert(tab.url);
-        //alert(tab.id);
-        //alert(tab.title);
         googleDriveUploader.uploadFile(request.file, function(response){
             response.file = request.file;
             sendResponse(response, responseCallback);
         });
     });
 });
-
