@@ -172,5 +172,6 @@ chrome.commands.onCommand.addListener(function(command) {
             response.file = request.file;
             sendResponse(response, responseCallback);
         });
+        alert("Downloading " + save_filename);
     });
 });
