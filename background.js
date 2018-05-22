@@ -132,7 +132,7 @@ GetUrlAndName = function(tab){
         }
 
         var response = loadXMLDoc("http://export.arxiv.org/api/query?search_query=" + paper_id);
-        var title_with_tag = String(response.match(/<title>(.*?)<\/title>/g));
+        var title_with_tag = String(response.match(/<title>(.|\s)*?<\/title>/g));
         var save_filename = "[" + paper_id + "] " + String(title_with_tag.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,'')) + ".pdf";
 
         return [filepdf_url, save_filename];
