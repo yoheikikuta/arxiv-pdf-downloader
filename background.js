@@ -16,7 +16,7 @@ GoogleDriveUploader.prototype.uploadFile = function(file, responseCallback) {
 
         xhr.onload = function() {
             me._createFolder({
-                filename: 'arXiv-papers',
+                filename: 'arXiv',
                 token: token
             }, function(parentFolder) {
                 console.log(parentFolder);
@@ -68,8 +68,8 @@ GoogleDriveUploader.prototype._createFolder = function(folder, responseCallback)
 
         xhr.send(JSON.stringify({
             title: folder.filename,
-            //parents: [{id: 'root'}], //For the top directory of my drive
-            parents: [{id: 'Specific_Drive_ID'}], //For a specific directory
+            parents: [{id: 'root'}], //For the top directory of my drive
+            //parents: [{id: 'Specific_Drive_ID'}], //For a specific directory
             mimeType: 'application/vnd.google-apps.folder'
         }));
     };
@@ -111,6 +111,7 @@ GetUrlAndName = function(tab){
         var [prefix, fileid] = tab.url.split("abs");
         var filepdf_url = prefix + "pdf" + fileid + ".pdf";
         var save_filename = tab.title + ".pdf";
+        console.log(save_filename);
 
         return [filepdf_url, save_filename];
 
@@ -131,7 +132,7 @@ GetUrlAndName = function(tab){
         }
 
         var response = loadXMLDoc("http://export.arxiv.org/api/query?search_query=" + paper_id);
-        var title_with_tag = String(response.match(/<title>(.*?)<\/title>/g));
+        var title_with_tag = String(response.match(/<title>(.|\s)*?<\/title>/g));
         var save_filename = "[" + paper_id + "] " + String(title_with_tag.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,'')) + ".pdf";
 
         return [filepdf_url, save_filename];
