@@ -16,7 +16,7 @@ GoogleDriveUploader.prototype.uploadFile = function(file, responseCallback) {
 
         xhr.onload = function() {
             me._createFolder({
-                filename: 'arXiv-papers',
+                filename: 'arXiv',
                 token: token
             }, function(parentFolder) {
                 console.log(parentFolder);
@@ -111,6 +111,7 @@ GetUrlAndName = function(tab){
         var [prefix, fileid] = tab.url.split("abs");
         var filepdf_url = prefix + "pdf" + fileid + ".pdf";
         var save_filename = tab.title + ".pdf";
+        console.log(save_filename);
 
         return [filepdf_url, save_filename];
 
