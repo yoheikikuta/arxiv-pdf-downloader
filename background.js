@@ -50,7 +50,7 @@ GoogleDriveUploader.prototype._createFolder = function(folder, responseCallback)
     xhr.setRequestHeader('Authorization', 'Bearer '+folder.token);
 
     xhr.onload = function() {
-        var result = JSON.parse(this.response);
+        const result = JSON.parse(this.response);
 
         if (result.items.length > 0) {
             return responseCallback({id: result.items[0].id});
@@ -62,7 +62,7 @@ GoogleDriveUploader.prototype._createFolder = function(folder, responseCallback)
         xhr.setRequestHeader('Authorization', 'Bearer '+folder.token);
 
         xhr.onload = function() {
-            var result = JSON.parse(this.response);
+            const result = JSON.parse(this.response);
             return responseCallback({id: result.id});
         };
 
@@ -104,20 +104,20 @@ GoogleDriveUploader.prototype._putOnDrive = function(file, responseCallback) {
 
 
 GetUrlAndName = function(tab){
-    var pattern_abst = /https:\/\/arxiv.org\/abs\/\S+/;
-    var pattern_pdf = /https:\/\/arxiv.org\/pdf\/\S+/;
+    const pattern_abst = /https:\/\/arxiv.org\/abs\/\S+/;
+    const pattern_pdf = /https:\/\/arxiv.org\/pdf\/\S+/;
 
     if(pattern_abst.test(String(tab.url))) {
-        var [prefix, fileid] = tab.url.split("abs");
-        var filepdf_url = prefix + "pdf" + fileid + ".pdf";
-        var save_filename = tab.title + ".pdf";
+        const [prefix, fileid] = tab.url.split("abs");
+        const filepdf_url = prefix + "pdf" + fileid + ".pdf";
+        const save_filename = tab.title + ".pdf";
         console.log(save_filename);
 
         return [filepdf_url, save_filename];
 
     } else if (pattern_pdf.test(String(tab.url))) {
-        var filepdf_url = tab.url;
-        var paper_id = tab.title.replace(".pdf", "");
+        const filepdf_url = tab.url;
+        const paper_id = tab.title.replace(".pdf", "");
 
         function loadXMLDoc(myurl) {
             var xhttp = new XMLHttpRequest();
@@ -131,9 +131,9 @@ GetUrlAndName = function(tab){
             return xhttp.onreadystatechange();
         }
 
-        var response = loadXMLDoc("http://export.arxiv.org/api/query?search_query=" + paper_id);
-        var title_with_tag = String(response.match(/<title>(.|\s)*?<\/title>/g));
-        var save_filename = "[" + paper_id + "] " + String(title_with_tag.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,'')) + ".pdf";
+        const response = loadXMLDoc("http://export.arxiv.org/api/query?search_query=" + paper_id);
+        const title_with_tag = String(response.match(/<title>(.|\s)*?<\/title>/g));
+        const save_filename = "[" + paper_id + "] " + String(title_with_tag.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,'')) + ".pdf";
 
         return [filepdf_url, save_filename];
 
@@ -145,11 +145,11 @@ GetUrlAndName = function(tab){
 
 
 CreateRequestObj = function(name, tab){
-    var file = {
+    const file = {
         name: name,
         path: tab.url
     };
-    var request = {
+    const request = {
         file: file,
         action: 'putFileOnGoogleDrive',
         tab: tab.id
@@ -164,11 +164,11 @@ chrome.commands.onCommand.addListener(function(command) {
         // Exit if the website is not arXiv
         if (!GetUrlAndName(tab)){return;}
 
-        var [filepdf_url, save_filename] = GetUrlAndName(tab);
+        const [filepdf_url, save_filename] = GetUrlAndName(tab);
         tab.url = filepdf_url
 
         var googleDriveUploader = new GoogleDriveUploader();
-        var request = CreateRequestObj(save_filename, tab);
+        const request = CreateRequestObj(save_filename, tab);
         googleDriveUploader.uploadFile(request.file, function(response){
             response.file = request.file;
             sendResponse(response, responseCallback);
