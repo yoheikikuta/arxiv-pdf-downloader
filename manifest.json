@@ -18,7 +18,7 @@
         "persistent": false
     },
     "oauth2": {
-        "client_id": "<CLIENT_ID>",
+        "client_id": "825891240033-adpgrru6hufrf2npvg0eiud1i1euh9ci.apps.googleusercontent.com",
         "scopes": [
             "https://www.googleapis.com/auth/drive"
         ]
