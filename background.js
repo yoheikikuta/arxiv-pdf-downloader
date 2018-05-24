@@ -46,8 +46,8 @@ GoogleDriveUploader.prototype._createFolder = function(folder, responseCallback)
     var me = this;
 
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', me.apiUrl+'?maxResults=1&trashed=false&q=title = \''+folder.filename+'\'');
-    xhr.setRequestHeader('Authorization', 'Bearer '+folder.token);
+    xhr.open('GET', `${me.apiUrl}?maxResults=1&trashed=false&q=title = '${folder.filename}'`);
+    xhr.setRequestHeader('Authorization', `Bearer ${folder.token}`);
 
     xhr.onload = function() {
         const result = JSON.parse(this.response);
@@ -59,7 +59,7 @@ GoogleDriveUploader.prototype._createFolder = function(folder, responseCallback)
         var xhr = new XMLHttpRequest();
         xhr.open('POST', me.apiUrl);
         xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-        xhr.setRequestHeader('Authorization', 'Bearer '+folder.token);
+        xhr.setRequestHeader('Authorization', `Bearer ${folder.token}`);
 
         xhr.onload = function() {
             const result = JSON.parse(this.response);
@@ -81,7 +81,7 @@ GoogleDriveUploader.prototype._putOnDrive = function(file, responseCallback) {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', this.uploadUrl, true);
     xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-    xhr.setRequestHeader('Authorization', 'Bearer '+file.token);
+    xhr.setRequestHeader('Authorization', `Bearer ${file.token}`);
 
     xhr.onload = function() {
         if (this.status != 200) {
@@ -91,7 +91,7 @@ GoogleDriveUploader.prototype._putOnDrive = function(file, responseCallback) {
         var xhr = new XMLHttpRequest();
         xhr.open('POST', this.getResponseHeader('Location'), true);
         xhr.setRequestHeader('Content-Type', file.mimetype);
-        xhr.setRequestHeader('Authorization', 'Bearer '+file.token);
+        xhr.setRequestHeader('Authorization', `Bearer ${file.token}`);
 
         xhr.send(file.blob);
     };
@@ -109,9 +109,8 @@ GetUrlAndName = function(tab){
 
     if(pattern_abst.test(String(tab.url))) {
         const [prefix, fileid] = tab.url.split("abs");
-        const filepdf_url = prefix + "pdf" + fileid + ".pdf";
-        const save_filename = tab.title + ".pdf";
-        console.log(save_filename);
+        const filepdf_url = `${prefix}pdf${fileid}.pdf`;
+        const save_filename = `${tab.title}.pdf`;
 
         return [filepdf_url, save_filename];
 
@@ -131,9 +130,9 @@ GetUrlAndName = function(tab){
             return xhttp.onreadystatechange();
         }
 
-        const response = loadXMLDoc("http://export.arxiv.org/api/query?search_query=" + paper_id);
+        const response = loadXMLDoc(`http://export.arxiv.org/api/query?search_query=${paper_id}`);
         const title_with_tag = String(response.match(/<title>(.|\s)*?<\/title>/g));
-        const save_filename = "[" + paper_id + "] " + String(title_with_tag.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,'')) + ".pdf";
+        const save_filename = `[${paper_id}] ${String(title_with_tag.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,''))}.pdf`;
 
         return [filepdf_url, save_filename];
 
@@ -166,6 +165,7 @@ chrome.commands.onCommand.addListener(function(command) {
 
         const [filepdf_url, save_filename] = GetUrlAndName(tab);
         tab.url = filepdf_url
+        console.log(save_filename);
 
         var googleDriveUploader = new GoogleDriveUploader();
         const request = CreateRequestObj(save_filename, tab);
@@ -173,6 +173,6 @@ chrome.commands.onCommand.addListener(function(command) {
             response.file = request.file;
             sendResponse(response, responseCallback);
         });
-        alert("Downloading " + save_filename);
+        alert(`Downloading ${save_filename}`);
     });
 });
