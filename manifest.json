@@ -1,8 +1,8 @@
 {
     "manifest_version": 2,
-    "name": "Arxiv Downloader",
+    "name": "arXiv pdf Downloader",
     "version": "1.0",
-    "description" : "This is a chrome extension for downloading arXiv papers",
+    "description" : "This is a chrome extension to download arXiv papers into google drive.",
     "permissions" : ["tabs", "downloads", "unlimitedStorage", "identity"],
     "content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'",
     "commands": {
@@ -10,7 +10,7 @@
             "suggested_key": {
                 "default": "Ctrl+Shift+A"
             },
-            "description": "Download arXiv pdf file into google drive"
+            "description": "Download arXiv pdf file into google drive."
         }
     },
     "background": {

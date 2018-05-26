@@ -2,7 +2,7 @@
 
 This is a chrome extension to download pdfs published on arxiv into the google drive.
 
-## How to install 
+## How to install
 - Clone this repository.
 - Turn on the developer mode of Google Chrome extension.
 - Load this extension through `LOAD UNPACKED`.
@@ -14,6 +14,6 @@ This is a chrome extension to download pdfs published on arxiv into the google d
 - Set your Clident ID obtained from the credential in `manifest.json`.
 
 ## USAGE
-- **[CMD + SHIFT + A]** on arXiv abstract or pdf pages.
+- **[CMD + SHIFT + A] (for MAC) or [CTRL + SHIFT + A] (OTHERS)** on arXiv abstract or pdf pages.
 - Interactive authentication.
-- You can see `arXiv-papers` directory in the google drive.
+- You can see `arXiv` directory in the google drive.
