@@ -14,6 +14,6 @@ This is a chrome extension to download pdfs published on arxiv into the google d
 - Set your Clident ID obtained from the credential in `manifest.json`.
 
 ## USAGE
-- **[CMD + SHIFT + A] (for MAC) or [CTRL + SHIFT + A] (OTHERS)** on arXiv abstract or pdf pages.
+- **[CMD + B] (for MAC) or [CTRL + SHIFT + B] (OTHERS)** on arXiv abstract or pdf pages.
 - Interactive authentication.
 - You can see `arXiv` directory in the google drive.
