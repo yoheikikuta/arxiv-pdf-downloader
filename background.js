@@ -1,12 +1,85 @@
-function addCorsHeader(details) {
+// Utility function
+const addCorsHeader = (details) => {
     const responseHeaders = details.responseHeaders;
     responseHeaders.push({
         name: 'Access-Control-Allow-Origin',
         value: '*'
     });
     return { responseHeaders: responseHeaders };
-}
+};
 
+const GetUrlAndName = async (tab) => {
+    const pattern_abst = /https:\/\/arxiv.org\/abs\/\S+/;
+    const pattern_pdf = /https:\/\/arxiv.org\/pdf\/\S+/;
+
+    if (pattern_abst.test(String(tab.url))) {
+        const [prefix, fileid] = tab.url.split("abs");
+        const filepdf_url = `${prefix}pdf${fileid}.pdf`;
+
+        try {
+            const response = await fetch(tab.url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const text = await response.text();
+            const title_match = text.match(/<title>(.*?)<\/title>/);
+
+            if (!title_match || title_match.length < 2) {
+                console.error('Error: Title not found in abs page');
+                return null;
+            }
+
+            const title = title_match[1].replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
+            const save_filename = `${title}.pdf`;
+            return [filepdf_url, save_filename];
+        } catch (error) {
+            console.error('Error fetching title from abs page:', error);
+            return null;
+        }
+    } else if (pattern_pdf.test(String(tab.url))) {
+        const filepdf_url = tab.url;
+        const paper_id = tab.url.split('/').pop().replace(".pdf", "");
+
+        try {
+            const abs_url = `https://arxiv.org/abs/${paper_id}`;
+            const response = await fetch(abs_url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const text = await response.text();
+            const title_match = text.match(/<title>(.*?)<\/title>/);
+
+            if (!title_match || title_match.length < 2) {
+                console.error('Error: Title not found in abs page');
+                return null;
+            }
+
+            const title = title_match[1].replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
+            const save_filename = `${title}.pdf`;
+            return [filepdf_url, save_filename];
+        } catch (error) {
+            console.error('Error fetching title from abs page:', error);
+            return null;
+        }
+    } else {
+        console.log("This extension is valid only in arXiv abstract or pdf pages!!");
+        return null;
+    }
+};
+
+const CreateRequestObj = (name, tab) => {
+    const file = {
+        name: name,
+        path: tab.url
+    };
+    return {
+        file: file,
+        action: 'putFileOnGoogleDrive',
+        tab: tab.id
+    };
+};
+
+// Set event listner
 chrome.webRequest.onHeadersReceived.addListener(
     addCorsHeader,
     { urls: ["https://arxiv.org/*"] },
@@ -146,77 +219,7 @@ class GoogleDriveUploader {
     }
 }
 
-const GetUrlAndName = async (tab) => {
-    const pattern_abst = /https:\/\/arxiv.org\/abs\/\S+/;
-    const pattern_pdf = /https:\/\/arxiv.org\/pdf\/\S+/;
-
-    if (pattern_abst.test(String(tab.url))) {
-        const [prefix, fileid] = tab.url.split("abs");
-        const filepdf_url = `${prefix}pdf${fileid}.pdf`;
-
-        try {
-            const response = await fetch(tab.url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const text = await response.text();
-            const title_match = text.match(/<title>(.*?)<\/title>/);
-
-            if (!title_match || title_match.length < 2) {
-                console.error('Error: Title not found in abs page');
-                return null;
-            }
-
-            const title = title_match[1].replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
-            const save_filename = `${title}.pdf`;
-            return [filepdf_url, save_filename];
-        } catch (error) {
-            console.error('Error fetching title from abs page:', error);
-            return null;
-        }
-    } else if (pattern_pdf.test(String(tab.url))) {
-        const filepdf_url = tab.url;
-        const paper_id = tab.url.split('/').pop().replace(".pdf", "");
-
-        try {
-            const abs_url = `https://arxiv.org/abs/${paper_id}`;
-            const response = await fetch(abs_url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const text = await response.text();
-            const title_match = text.match(/<title>(.*?)<\/title>/);
-
-            if (!title_match || title_match.length < 2) {
-                console.error('Error: Title not found in abs page');
-                return null;
-            }
-
-            const title = title_match[1].replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
-            const save_filename = `${title}.pdf`;
-            return [filepdf_url, save_filename];
-        } catch (error) {
-            console.error('Error fetching title from abs page:', error);
-            return null;
-        }
-    } else {
-        console.log("This extension is valid only in arXiv abstract or pdf pages!!");
-        return null;
-    }
-};
-
-const CreateRequestObj = (name, tab) => {
-    const file = {
-        name: name,
-        path: tab.url
-    };
-    return {
-        file: file,
-        action: 'putFileOnGoogleDrive',
-        tab: tab.id
-    };
-};
-
+// Set command listner
 chrome.commands.onCommand.addListener(async (command) => {
     console.log('Command received:', command);
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
