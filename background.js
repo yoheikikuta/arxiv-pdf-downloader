@@ -217,9 +217,9 @@ const CreateRequestObj = (name, tab) => {
     };
 };
 
-chrome.commands.onCommand.addListener(async function (command) {
+chrome.commands.onCommand.addListener(async (command) => {
     console.log('Command received:', command);
-    chrome.tabs.query({ active: true, currentWindow: true }, async function (tabs) {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
         let tab = tabs[0];
         console.log('Selected tab:', tab);
 
@@ -235,7 +235,7 @@ chrome.commands.onCommand.addListener(async function (command) {
 
         const googleDriveUploader = new GoogleDriveUploader();
         const request = CreateRequestObj(save_filename, tab);
-        googleDriveUploader.uploadFile(request.file, function (response) {
+        googleDriveUploader.uploadFile(request.file, (response) => {
             response.file = request.file;
             console.log('File uploaded:', response);
         });
