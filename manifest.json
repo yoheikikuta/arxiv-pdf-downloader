@@ -10,7 +10,7 @@
         "identity",
         "webRequest",
         "webRequestBlocking",
-        "*://arxiv.org/*"
+        "https://arxiv.org/*"
     ],
     "content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'",
     "commands": {

@@ -28,7 +28,7 @@ class GoogleDriveUploader {
                 console.error('Failed to authenticate user');
                 return;
             }
-            fetch(file.path, { mode: 'no-cors' })
+            fetch(file.path)
                 .then(response => response.blob())
                 .then(blob => {
                     me.createFolder({
