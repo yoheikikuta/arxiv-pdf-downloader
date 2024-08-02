@@ -1,153 +1,150 @@
 class GoogleDriveUploader {
-    constructor(){
-        // Google Drive API URL
-        this.apiUrl = 'https://www.googleapis.com/drive/v2/files';
-        // Google Drive upload URL
-        this.uploadUrl = 'https://www.googleapis.com/upload/drive/v2/files?uploadType=resumable';
-    };
+    constructor() {
+        this.apiUrl = 'https://www.googleapis.com/drive/v3/files';
+        this.uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    }
 
-    // File uploading method
     uploadFile(file, responseCallback) {
         let me = this;
+        console.log('Uploading file:', file);
 
-        me.authenticateUser(function(token) {
-            let xhr = new XMLHttpRequest();
-            xhr.responseType = 'blob';
-            xhr.open('GET', file.path);
-
-            xhr.onload = function() {
-                me.createFolder({
-                    filename: 'arXiv',
-                    token: token
-                }, function(parentFolder) {
-                    console.log(parentFolder);
-                    me.putOnDrive({
-                        blob: xhr.response,
-                        filename: file.name,
-                        mimetype: xhr.getResponseHeader('Content-Type'),
-                        parent: parentFolder,
+        me.authenticateUser(function (token) {
+            if (!token) {
+                console.error('Failed to authenticate user');
+                return;
+            }
+            fetch(file.path, { mode: 'no-cors' })
+                .then(response => response.blob())
+                .then(blob => {
+                    me.createFolder({
+                        filename: 'arXiv',
                         token: token
-                    }, responseCallback);
-                });
-            };
-            xhr.send();
+                    }, function (parentFolder) {
+                        console.log('Folder created or found:', parentFolder);
+                        me.putOnDrive({
+                            blob: blob,
+                            filename: file.name,
+                            mimetype: blob.type,
+                            parent: parentFolder.id,
+                            token: token
+                        }, responseCallback);
+                    });
+                })
+                .catch(error => console.error('Error fetching file:', error));
         });
-    };
+    }
 
-    // Authentification method
     authenticateUser(responseCallback) {
-        let me = self;
-        chrome.identity.getAuthToken({ 'interactive': true }, function(token) {
+        console.log('Authenticating user...');
+        chrome.identity.getAuthToken({ 'interactive': true }, function (token) {
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError);
+                responseCallback(null);
+                return;
+            }
+            console.log('Authenticated, token:', token);
             responseCallback(token);
         });
-    };
+    }
 
-    // Folder creating method
     createFolder(folder, responseCallback) {
         let me = this;
+        console.log('Creating folder:', folder.filename);
 
-        let xhr = new XMLHttpRequest();
-        xhr.open('GET', `${me.apiUrl}?maxResults=1&trashed=false&q=title = '${folder.filename}'`);
-        xhr.setRequestHeader('Authorization', `Bearer ${folder.token}`);
-
-        xhr.onload = function() {
-            const result = JSON.parse(this.response);
-
-            if (result.items.length > 0) {
-                return responseCallback({id: result.items[0].id});
+        fetch(`${me.apiUrl}?q=name='${folder.filename}' and mimeType='application/vnd.google-apps.folder'`, {
+            headers: {
+                'Authorization': `Bearer ${folder.token}`
             }
+        })
+            .then(response => response.json())
+            .then(result => {
+                console.log('Folder search result:', result);
 
-            let xhr = new XMLHttpRequest();
-            xhr.open('POST', me.apiUrl);
-            xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-            xhr.setRequestHeader('Authorization', `Bearer ${folder.token}`);
+                if (result.files.length > 0) {
+                    return responseCallback({ id: result.files[0].id });
+                }
 
-            xhr.onload = function() {
-                const result = JSON.parse(this.response);
-                return responseCallback({id: result.id});
-            };
+                fetch(me.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${folder.token}`
+                    },
+                    body: JSON.stringify({
+                        name: folder.filename,
+                        parents: ['root'],
+                        mimeType: 'application/vnd.google-apps.folder'
+                    })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(result => {
+                        console.log('Folder created:', result);
+                        return responseCallback({ id: result.id });
+                    })
+                    .catch(error => console.error('Error creating folder:', error));
+            })
+            .catch(error => console.error('Error searching folder:', error));
+    }
 
-            xhr.send(JSON.stringify({
-                title: folder.filename,
-                parents: [{id: 'root'}], //For the top directory of my drive
-                //parents: [{id: 'Specific_Drive_ID'}], //For a specific directory
-                mimeType: 'application/vnd.google-apps.folder'
-            }));
-        };
-        xhr.send();
-    };
-
-    // Putting file on drive method
     putOnDrive(file, responseCallback) {
-        let xhr = new XMLHttpRequest();
-        xhr.open('POST', this.uploadUrl, true);
-        xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-        xhr.setRequestHeader('Authorization', `Bearer ${file.token}`);
-
-        xhr.onload = function() {
-            if (this.status != 200) {
-                responseCallback({status: this.status});
-            }
-
-            let xhr = new XMLHttpRequest();
-            xhr.open('POST', this.getResponseHeader('Location'), true);
-            xhr.setRequestHeader('Content-Type', file.mimetype);
-            xhr.setRequestHeader('Authorization', `Bearer ${file.token}`);
-
-            xhr.send(file.blob);
+        const metadata = {
+            name: file.filename,
+            parents: [file.parent]
         };
+        const formData = new FormData();
+        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        formData.append('file', file.blob);
 
-        xhr.send(JSON.stringify({
-            parents: [file.parent],
-            title: file.filename
-        }));
-    };
+        fetch(this.uploadUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${file.token}`
+            },
+            body: formData
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(result => {
+                console.log('File upload result:', result);
+                responseCallback({ status: 'ok', result: result });
+            })
+            .catch(error => console.error('Error uploading file to drive:', error));
+    }
+}
 
-
-};
-
-
-GetUrlAndName = function(tab){
+GetUrlAndName = function (tab) {
     const pattern_abst = /https:\/\/arxiv.org\/abs\/\S+/;
     const pattern_pdf = /https:\/\/arxiv.org\/pdf\/\S+/;
 
-    if(pattern_abst.test(String(tab.url))) {
+    if (pattern_abst.test(String(tab.url))) {
         const [prefix, fileid] = tab.url.split("abs");
         const filepdf_url = `${prefix}pdf${fileid}.pdf`;
         const save_filename = `${tab.title}.pdf`;
-
         return [filepdf_url, save_filename];
-
     } else if (pattern_pdf.test(String(tab.url))) {
         const filepdf_url = tab.url;
         const paper_id = tab.title.replace(".pdf", "");
 
-        function loadXMLDoc(myurl) {
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function() {
-                if (this.readyState == 4 && this.status == 200) {
-                    return xhttp.responseText;
-                }
-            };
-            xhttp.open("GET", myurl, false);
-            xhttp.send();
-            return xhttp.onreadystatechange();
-        }
-
         const response = loadXMLDoc(`http://export.arxiv.org/api/query?search_query=${paper_id}`);
         const title_with_tag = String(response.match(/<title>(.|\s)*?<\/title>/g));
-        const save_filename = `[${paper_id}] ${String(title_with_tag.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,''))}.pdf`;
-
+        const save_filename = `[${paper_id}] ${String(title_with_tag.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, ''))}.pdf`;
         return [filepdf_url, save_filename];
-
     } else {
-        alert("This extension is valid only in arXiv abstract or pdf pages!!");
+        console.log("This extension is valid only in arXiv abstract or pdf pages!!");
         return null;
     }
-};
+}
 
-
-CreateRequestObj = function(name, tab){
+CreateRequestObj = function (name, tab) {
     const file = {
         name: name,
         path: tab.url
@@ -158,25 +155,31 @@ CreateRequestObj = function(name, tab){
         tab: tab.id
     };
     return request
-};
+}
 
+chrome.commands.onCommand.addListener(function (command) {
+    console.log('Command received:', command);
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        let tab = tabs[0];
+        console.log('Selected tab:', tab);
 
-chrome.commands.onCommand.addListener(function(command) {
-    chrome.tabs.getSelected(null, function(tab) {
-
-        // Exit if the website is not arXiv
-        if (!GetUrlAndName(tab)){return;}
+        if (!GetUrlAndName(tab)) {
+            console.log('Invalid URL:', tab.url);
+            return;
+        }
 
         const [filepdf_url, save_filename] = GetUrlAndName(tab);
-        tab.url = filepdf_url
-        console.log(save_filename);
+        tab.url = filepdf_url;
+        console.log('File URL and name:', filepdf_url, save_filename);
 
         const googleDriveUploader = new GoogleDriveUploader();
         const request = CreateRequestObj(save_filename, tab);
-        googleDriveUploader.uploadFile(request.file, function(response){
+        googleDriveUploader.uploadFile(request.file, function (response) {
             response.file = request.file;
-            sendResponse(response, responseCallback);
+            console.log('File uploaded:', response);
         });
-        alert(`Downloading ${save_filename}`);
+        console.log(`Downloading ${save_filename}`);
     });
 });
+
+console.log('Background script loaded');
