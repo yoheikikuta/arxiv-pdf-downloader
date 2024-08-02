@@ -146,23 +146,19 @@ class GoogleDriveUploader {
     }
 }
 
-GetUrlAndName = async function (tab) {
+const GetUrlAndName = async (tab) => {
     const pattern_abst = /https:\/\/arxiv.org\/abs\/\S+/;
     const pattern_pdf = /https:\/\/arxiv.org\/pdf\/\S+/;
 
     if (pattern_abst.test(String(tab.url))) {
         const [prefix, fileid] = tab.url.split("abs");
         const filepdf_url = `${prefix}pdf${fileid}.pdf`;
-        const save_filename = `${tab.title}.pdf`;
-        return [filepdf_url, save_filename];
-
-    } else if (pattern_pdf.test(String(tab.url))) {
-        const filepdf_url = tab.url;
-        const paper_id = tab.url.split('/').pop().replace(".pdf", "");
 
         try {
-            const abs_url = `https://arxiv.org/abs/${paper_id}`;
-            const response = await fetch(abs_url);
+            const response = await fetch(tab.url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const text = await response.text();
             const title_match = text.match(/<title>(.*?)<\/title>/);
 
@@ -171,7 +167,31 @@ GetUrlAndName = async function (tab) {
                 return null;
             }
 
-            // タイトルの前にIDを追加しないように修正
+            const title = title_match[1].replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
+            const save_filename = `${title}.pdf`;
+            return [filepdf_url, save_filename];
+        } catch (error) {
+            console.error('Error fetching title from abs page:', error);
+            return null;
+        }
+    } else if (pattern_pdf.test(String(tab.url))) {
+        const filepdf_url = tab.url;
+        const paper_id = tab.url.split('/').pop().replace(".pdf", "");
+
+        try {
+            const abs_url = `https://arxiv.org/abs/${paper_id}`;
+            const response = await fetch(abs_url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const text = await response.text();
+            const title_match = text.match(/<title>(.*?)<\/title>/);
+
+            if (!title_match || title_match.length < 2) {
+                console.error('Error: Title not found in abs page');
+                return null;
+            }
+
             const title = title_match[1].replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
             const save_filename = `${title}.pdf`;
             return [filepdf_url, save_filename];
