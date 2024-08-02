@@ -205,18 +205,17 @@ const GetUrlAndName = async (tab) => {
     }
 };
 
-CreateRequestObj = function (name, tab) {
+const CreateRequestObj = (name, tab) => {
     const file = {
         name: name,
         path: tab.url
     };
-    const request = {
+    return {
         file: file,
         action: 'putFileOnGoogleDrive',
         tab: tab.id
     };
-    return request;
-}
+};
 
 chrome.commands.onCommand.addListener(async function (command) {
     console.log('Command received:', command);
