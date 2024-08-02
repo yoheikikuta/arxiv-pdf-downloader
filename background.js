@@ -19,94 +19,104 @@ class GoogleDriveUploader {
         this.uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
     }
 
-    uploadFile(file, responseCallback) {
-        let me = this;
+    async uploadFile(file, responseCallback) {
         console.log('Uploading file:', file);
 
-        me.authenticateUser(function (token) {
+        try {
+            const token = await this.authenticateUser();
             if (!token) {
                 console.error('Failed to authenticate user');
                 return;
             }
-            fetch(file.path)
-                .then(response => response.blob())
-                .then(blob => {
-                    me.createFolder({
-                        filename: 'arXiv',
-                        token: token
-                    }, function (parentFolder) {
-                        console.log('Folder created or found:', parentFolder);
-                        me.putOnDrive({
-                            blob: blob,
-                            filename: file.name,
-                            mimetype: blob.type,
-                            parent: parentFolder.id,
-                            token: token
-                        }, responseCallback);
-                    });
-                })
-                .catch(error => console.error('Error fetching file:', error));
-        });
+
+            const blob = await this.fetchFileBlob(file.path);
+            const parentFolder = await this.createFolder('arXiv', token);
+            console.log('Folder created or found:', parentFolder);
+
+            const result = await this.putOnDrive({
+                blob: blob,
+                filename: file.name,
+                mimetype: blob.type,
+                parent: parentFolder.id,
+                token: token
+            });
+
+            responseCallback({ status: 'ok', result: result });
+        } catch (error) {
+            console.error('Error uploading file:', error);
+        }
     }
 
-    authenticateUser(responseCallback) {
+    async authenticateUser() {
         console.log('Authenticating user...');
-        chrome.identity.getAuthToken({ 'interactive': true }, function (token) {
-            if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError);
-                responseCallback(null);
-                return;
-            }
-            console.log('Authenticated, token:', token);
-            responseCallback(token);
+        return new Promise((resolve, reject) => {
+            chrome.identity.getAuthToken({ 'interactive': true }, (token) => {
+                if (chrome.runtime.lastError) {
+                    console.error(chrome.runtime.lastError);
+                    reject(null);
+                } else {
+                    console.log('Authenticated, token:', token);
+                    resolve(token);
+                }
+            });
         });
     }
 
-    createFolder(folder, responseCallback) {
-        let me = this;
-        console.log('Creating folder:', folder.filename);
-
-        fetch(`${me.apiUrl}?q=name='${folder.filename}' and mimeType='application/vnd.google-apps.folder'`, {
-            headers: {
-                'Authorization': `Bearer ${folder.token}`
+    async fetchFileBlob(filePath) {
+        try {
+            const response = await fetch(filePath);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        })
-            .then(response => response.json())
-            .then(result => {
-                console.log('Folder search result:', result);
-
-                if (result.files.length > 0) {
-                    return responseCallback({ id: result.files[0].id });
-                }
-
-                fetch(me.apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${folder.token}`
-                    },
-                    body: JSON.stringify({
-                        name: folder.filename,
-                        parents: ['root'],
-                        mimeType: 'application/vnd.google-apps.folder'
-                    })
-                })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(result => {
-                        console.log('Folder created:', result);
-                        return responseCallback({ id: result.id });
-                    })
-                    .catch(error => console.error('Error creating folder:', error));
-            })
-            .catch(error => console.error('Error searching folder:', error));
+            return await response.blob();
+        } catch (error) {
+            console.error('Error fetching file:', error);
+            throw error;
+        }
     }
 
-    putOnDrive(file, responseCallback) {
+    async createFolder(folderName, token) {
+        console.log('Creating folder:', folderName);
+
+        const query = encodeURIComponent(`name='${folderName}' and mimeType='application/vnd.google-apps.folder'`);
+        const folderSearchUrl = `${this.apiUrl}?q=${query}`;
+
+        try {
+            const searchResponse = await fetch(folderSearchUrl, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const searchResult = await searchResponse.json();
+            console.log('Folder search result:', searchResult);
+
+            if (searchResult.files.length > 0) {
+                return { id: searchResult.files[0].id };
+            }
+
+            const createResponse = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: folderName,
+                    parents: ['root'],
+                    mimeType: 'application/vnd.google-apps.folder'
+                })
+            });
+            if (!createResponse.ok) {
+                throw new Error(`HTTP error! status: ${createResponse.status}`);
+            }
+            const createResult = await createResponse.json();
+            console.log('Folder created:', createResult);
+            return { id: createResult.id };
+        } catch (error) {
+            console.error('Error creating/searching folder:', error);
+            throw error;
+        }
+    }
+
+    async putOnDrive(file) {
         const metadata = {
             name: file.filename,
             parents: [file.parent]
@@ -115,24 +125,24 @@ class GoogleDriveUploader {
         formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
         formData.append('file', file.blob);
 
-        fetch(this.uploadUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${file.token}`
-            },
-            body: formData
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(result => {
-                console.log('File upload result:', result);
-                responseCallback({ status: 'ok', result: result });
-            })
-            .catch(error => console.error('Error uploading file to drive:', error));
+        try {
+            const response = await fetch(this.uploadUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${file.token}`
+                },
+                body: formData
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            console.log('File upload result:', result);
+            return result;
+        } catch (error) {
+            console.error('Error uploading file to drive:', error);
+            throw error;
+        }
     }
 }
 
