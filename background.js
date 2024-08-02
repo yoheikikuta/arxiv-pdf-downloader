@@ -1,13 +1,15 @@
+function addCorsHeader(details) {
+    const responseHeaders = details.responseHeaders;
+    responseHeaders.push({
+        name: 'Access-Control-Allow-Origin',
+        value: '*'
+    });
+    return { responseHeaders: responseHeaders };
+}
+
 chrome.webRequest.onHeadersReceived.addListener(
-    function (details) {
-        const responseHeaders = details.responseHeaders;
-        responseHeaders.push({
-            name: 'Access-Control-Allow-Origin',
-            value: '*'
-        });
-        return { responseHeaders: responseHeaders };
-    },
-    { urls: ["*://arxiv.org/*"] },
+    addCorsHeader,
+    { urls: ["https://arxiv.org/*"] },
     ["blocking", "responseHeaders"]
 );
 
