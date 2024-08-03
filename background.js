@@ -1,13 +1,3 @@
-// Utility function
-const addCorsHeader = (details) => {
-    const responseHeaders = details.responseHeaders;
-    responseHeaders.push({
-        name: 'Access-Control-Allow-Origin',
-        value: '*'
-    });
-    return { responseHeaders: responseHeaders };
-};
-
 const GetUrlAndName = async (tab) => {
     const pattern_abst = /https:\/\/arxiv.org\/abs\/\S+/;
     const pattern_pdf = /https:\/\/arxiv.org\/pdf\/\S+/;
@@ -79,12 +69,6 @@ const CreateRequestObj = (name, tab) => {
     };
 };
 
-// Set event listner
-chrome.webRequest.onHeadersReceived.addListener(
-    addCorsHeader,
-    { urls: ["https://arxiv.org/*"] },
-    ["blocking", "responseHeaders"]
-);
 
 class GoogleDriveUploader {
     constructor() {
@@ -219,7 +203,7 @@ class GoogleDriveUploader {
     }
 }
 
-// Set command listner
+
 chrome.commands.onCommand.addListener(async (command) => {
     console.log('Command received:', command);
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {

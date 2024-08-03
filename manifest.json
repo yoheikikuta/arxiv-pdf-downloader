@@ -1,18 +1,21 @@
 {
-    "manifest_version": 2,
+    "manifest_version": 3,
     "name": "arXiv pdf Downloader",
-    "version": "2.0",
+    "version": "3.0",
     "description": "This is a chrome extension to download arXiv papers into google drive.",
     "permissions": [
         "tabs",
         "downloads",
-        "unlimitedStorage",
         "identity",
-        "webRequest",
-        "webRequestBlocking",
+        "declarativeNetRequest",
+        "storage"
+    ],
+    "host_permissions": [
         "https://arxiv.org/*"
     ],
-    "content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'",
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'"
+    },
     "commands": {
         "EventName": {
             "suggested_key": {
@@ -23,10 +26,7 @@
         }
     },
     "background": {
-        "scripts": [
-            "background.js"
-        ],
-        "persistent": true
+        "service_worker": "background.js"
     },
     "oauth2": {
         "client_id": "825891240033-l9knbtgoro0qp9rsb11o1jqh96vohh99.apps.googleusercontent.com",
@@ -34,7 +34,7 @@
             "https://www.googleapis.com/auth/drive"
         ]
     },
-    "browser_action": {
+    "action": {
         "default_icon": {
             "19": "images/icon_19.png",
             "32": "images/icon_32.png",
@@ -49,5 +49,14 @@
         "32": "images/icon_32.png",
         "48": "images/icon_48.png",
         "128": "images/icon_128.png"
+    },
+    "declarative_net_request": {
+        "rule_resources": [
+            {
+                "id": "ruleset_1",
+                "enabled": true,
+                "path": "rules.json"
+            }
+        ]
     }
 }
