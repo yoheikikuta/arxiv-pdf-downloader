@@ -56,6 +56,20 @@ const createRequestObj = (name, tab) => {
     };
 };
 
+const showNotification = (title, message, type) => {
+    chrome.notifications.create('', {
+        type: 'basic',
+        iconUrl: 'images/icon_128.png',
+        title: title,
+        message: message
+    }, (notificationId) => {
+        if (chrome.runtime.lastError) {
+            console.error(chrome.runtime.lastError.message);
+        } else {
+            console.log(`Notification ${type}: ${notificationId}`);
+        }
+    });
+};
 
 class GoogleDriveUploader {
     constructor() {
@@ -63,14 +77,14 @@ class GoogleDriveUploader {
         this.uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
     }
 
-    async uploadFile(file, responseCallback) {
+    async uploadFile(file) {
         console.log('Uploading file:', file);
 
         try {
             const token = await this.authenticateUser();
             if (!token) {
                 console.error('Failed to authenticate user');
-                return;
+                throw new Error('Failed to authenticate user');
             }
 
             const blob = await this.fetchFileBlob(file.path);
@@ -85,9 +99,11 @@ class GoogleDriveUploader {
                 token: token
             });
 
-            responseCallback({ status: 'ok', result: result });
+            console.log('File uploaded successfully:', result);
+            return result;
         } catch (error) {
             console.error('Error uploading file:', error);
+            throw error;
         }
     }
 
@@ -97,7 +113,7 @@ class GoogleDriveUploader {
             chrome.identity.getAuthToken({ 'interactive': true }, (token) => {
                 if (chrome.runtime.lastError) {
                     console.error(chrome.runtime.lastError);
-                    reject(null);
+                    reject(new Error(chrome.runtime.lastError.message));
                 } else {
                     console.log('Authenticated, token:', token);
                     resolve(token);
@@ -197,23 +213,25 @@ chrome.commands.onCommand.addListener(async (command) => {
         let tab = tabs[0];
         console.log('Selected tab:', tab);
 
-        const result = await getUrlAndName(tab);
-        if (!result) {
-            console.log('Invalid URL:', tab.url);
-            return;
+        try {
+            const result = await getUrlAndName(tab);
+            if (!result) {
+                throw new Error('Invalid URL');
+            }
+
+            const [filepdf_url, save_filename] = result;
+            tab.url = filepdf_url;
+            console.log('File URL and name:', filepdf_url, save_filename);
+
+            const googleDriveUploader = new GoogleDriveUploader();
+            const request = createRequestObj(save_filename, tab);
+            await googleDriveUploader.uploadFile(request.file);
+
+            showNotification('SUCCESS', `File ${save_filename} uploaded successfully.`, 'success');
+        } catch (error) {
+            console.error('Error in command listener:', error);
+            showNotification('FAILURE', `Error: ${error.message}`, 'failure');
         }
-
-        const [filepdf_url, save_filename] = result;
-        tab.url = filepdf_url;
-        console.log('File URL and name:', filepdf_url, save_filename);
-
-        const googleDriveUploader = new GoogleDriveUploader();
-        const request = createRequestObj(save_filename, tab);
-        googleDriveUploader.uploadFile(request.file, (response) => {
-            response.file = request.file;
-            console.log('File uploaded:', response);
-        });
-        console.log(`Downloading ${save_filename}`);
     });
 });
 
