@@ -1,58 +1,45 @@
-const GetUrlAndName = async (tab) => {
-    const pattern_abst = /https:\/\/arxiv.org\/abs\/\S+/;
-    const pattern_pdf = /https:\/\/arxiv.org\/pdf\/\S+/;
+const fetchTitleFromAbsPage = async (url) => {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-    if (pattern_abst.test(String(tab.url))) {
-        const [prefix, fileid] = tab.url.split("abs");
-        const filepdf_url = `${prefix}pdf${fileid}.pdf`;
+        const text = await response.text();
+        const titleMatch = text.match(/<title>(.*?)<\/title>/);
+        if (!titleMatch || titleMatch.length < 2) throw new Error('Title not found in abs page');
 
-        try {
-            const response = await fetch(tab.url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const text = await response.text();
-            const title_match = text.match(/<title>(.*?)<\/title>/);
+        const title = titleMatch[1].replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
+        return title;
+    } catch (error) {
+        console.error('Error fetching title from abs page:', error);
+        return null;
+    }
+};
 
-            if (!title_match || title_match.length < 2) {
-                console.error('Error: Title not found in abs page');
-                return null;
-            }
+const getUrlAndName = async (tab) => {
+    const url = String(tab.url);
+    const patternAbst = /https:\/\/arxiv.org\/abs\/\S+/;
+    const patternPdf = /https:\/\/arxiv.org\/pdf\/\S+/;
 
-            const title = title_match[1].replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
-            const save_filename = `${title}.pdf`;
-            return [filepdf_url, save_filename];
-        } catch (error) {
-            console.error('Error fetching title from abs page:', error);
-            return null;
-        }
-    } else if (pattern_pdf.test(String(tab.url))) {
-        const filepdf_url = tab.url;
-        const paper_id = tab.url.split('/').pop().replace(".pdf", "");
+    let filePdfUrl, absUrl, title;
 
-        try {
-            const abs_url = `https://arxiv.org/abs/${paper_id}`;
-            const response = await fetch(abs_url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const text = await response.text();
-            const title_match = text.match(/<title>(.*?)<\/title>/);
-
-            if (!title_match || title_match.length < 2) {
-                console.error('Error: Title not found in abs page');
-                return null;
-            }
-
-            const title = title_match[1].replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
-            const save_filename = `${title}.pdf`;
-            return [filepdf_url, save_filename];
-        } catch (error) {
-            console.error('Error fetching title from abs page:', error);
-            return null;
-        }
+    if (patternAbst.test(url)) {
+        const [prefix, fileId] = url.split("abs");
+        filePdfUrl = `${prefix}pdf${fileId}.pdf`;
+        title = await fetchTitleFromAbsPage(url);
+    } else if (patternPdf.test(url)) {
+        filePdfUrl = url;
+        const paperId = url.split('/').pop().replace(".pdf", "");
+        absUrl = `https://arxiv.org/abs/${paperId}`;
+        title = await fetchTitleFromAbsPage(absUrl);
     } else {
         console.log("This extension is valid only in arXiv abstract or pdf pages!!");
+        return null;
+    }
+
+    if (title) {
+        const saveFilename = `${title}.pdf`;
+        return [filePdfUrl, saveFilename];
+    } else {
         return null;
     }
 };
@@ -210,7 +197,7 @@ chrome.commands.onCommand.addListener(async (command) => {
         let tab = tabs[0];
         console.log('Selected tab:', tab);
 
-        const result = await GetUrlAndName(tab);
+        const result = await getUrlAndName(tab);
         if (!result) {
             console.log('Invalid URL:', tab.url);
             return;
