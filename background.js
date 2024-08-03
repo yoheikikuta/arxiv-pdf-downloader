@@ -44,7 +44,7 @@ const getUrlAndName = async (tab) => {
     }
 };
 
-const CreateRequestObj = (name, tab) => {
+const createRequestObj = (name, tab) => {
     const file = {
         name: name,
         path: tab.url
@@ -208,7 +208,7 @@ chrome.commands.onCommand.addListener(async (command) => {
         console.log('File URL and name:', filepdf_url, save_filename);
 
         const googleDriveUploader = new GoogleDriveUploader();
-        const request = CreateRequestObj(save_filename, tab);
+        const request = createRequestObj(save_filename, tab);
         googleDriveUploader.uploadFile(request.file, (response) => {
             response.file = request.file;
             console.log('File uploaded:', response);
