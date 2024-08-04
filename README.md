@@ -2,9 +2,9 @@
 
 This is a Chrome extension designed to download PDFs published on arXiv directly to your Google Drive.
 
-![upload notification](https://imgur.com/kuUj1eX.png)
-
-![google drive](https://imgur.com/70wp72e.png)
+<p align="center">
+  <img src="https://imgur.com/utyIndE.gif" />
+</p>
 
 ## How to install
 - Clone this repository.
